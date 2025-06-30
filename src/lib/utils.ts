@@ -44,28 +44,103 @@ export function extractVideoId(url: string, platform: SocialPlatform): string | 
     
     switch(platform) {
       case 'youtube':
-        return new URLSearchParams(urlObj.search).get('v') || 
-               urlObj.pathname.split('/').filter(Boolean)[0]; // For youtu.be links
+        // Handle youtube.com/watch?v=ID
+        const searchParams = new URLSearchParams(urlObj.search);
+        const vParam = searchParams.get('v');
+        if (vParam) return vParam;
+        
+        // Handle youtu.be/ID
+        if (urlObj.hostname === 'youtu.be') {
+          return urlObj.pathname.substring(1);
+        }
+        
+        // Handle youtube.com/embed/ID
+        if (urlObj.pathname.includes('/embed/')) {
+          return urlObj.pathname.split('/embed/')[1];
+        }
+        
+        return null;
+        
       case 'instagram':
         // Example: https://www.instagram.com/reel/ABC123/
+        // Example: https://www.instagram.com/p/ABC123/
         const instaParts = urlObj.pathname.split('/').filter(Boolean);
-        if (instaParts.includes('reel') || instaParts.includes('p')) {
-          const idx = instaParts.indexOf('reel') !== -1 ? 
-                      instaParts.indexOf('reel') : 
-                      instaParts.indexOf('p');
-          return idx + 1 < instaParts.length ? instaParts[idx + 1] : null;
+        
+        // Find reel or p in the path
+        const reelIndex = instaParts.findIndex(part => 
+          part === 'reel' || part === 'p' || part === 'reels'
+        );
+        
+        if (reelIndex !== -1 && reelIndex + 1 < instaParts.length) {
+          return instaParts[reelIndex + 1];
         }
+        
         return null;
+        
       case 'tiktok':
-        // Example: https://www.tiktok.com/@username/video/1234567890
+        // Handle different TikTok URL formats
         const tiktokParts = urlObj.pathname.split('/').filter(Boolean);
-        const videoIdx = tiktokParts.indexOf('video');
-        return videoIdx !== -1 && videoIdx + 1 < tiktokParts.length ? 
-               tiktokParts[videoIdx + 1] : null;
+        
+        // Format: tiktok.com/@username/video/1234567890
+        const videoIndex = tiktokParts.indexOf('video');
+        if (videoIndex !== -1 && videoIndex + 1 < tiktokParts.length) {
+          return tiktokParts[videoIndex + 1];
+        }
+        
+        // Format: tiktok.com/t/abcdef/
+        if (tiktokParts[0] === 't' && tiktokParts.length > 1) {
+          return tiktokParts[1];
+        }
+        
+        // Format: tiktok.com/@username/photo/1234567890
+        const photoIndex = tiktokParts.indexOf('photo');
+        if (photoIndex !== -1 && photoIndex + 1 < tiktokParts.length) {
+          return tiktokParts[photoIndex + 1];
+        }
+        
+        // Format: vm.tiktok.com/1234567890/
+        if (urlObj.hostname === 'vm.tiktok.com') {
+          return tiktokParts[0];
+        }
+        
+        return null;
+        
       case 'facebook':
         // Example: https://www.facebook.com/watch/?v=1234567890
-        return new URLSearchParams(urlObj.search).get('v') || 
-               urlObj.pathname.split('/').filter(Boolean).pop() || null;
+        const fbVParam = new URLSearchParams(urlObj.search).get('v');
+        if (fbVParam) return fbVParam;
+        
+        // Example: https://www.facebook.com/username/videos/1234567890
+        const videosIndex = tiktokParts.indexOf('videos');
+        if (videosIndex !== -1 && videosIndex + 1 < tiktokParts.length) {
+          return tiktokParts[videosIndex + 1];
+        }
+        
+        // Example: https://fb.watch/abc123/
+        if (urlObj.hostname === 'fb.watch') {
+          return urlObj.pathname.substring(1).replace(/\/$/, '');
+        }
+        
+        return null;
+        
+      case 'twitter':
+        // Example: https://twitter.com/username/status/1234567890
+        const twitterParts = urlObj.pathname.split('/').filter(Boolean);
+        const statusIndex = twitterParts.indexOf('status');
+        if (statusIndex !== -1 && statusIndex + 1 < twitterParts.length) {
+          return twitterParts[statusIndex + 1];
+        }
+        
+        // Example: https://x.com/username/status/1234567890
+        if (urlObj.hostname === 'x.com') {
+          const xStatusIndex = twitterParts.indexOf('status');
+          if (xStatusIndex !== -1 && xStatusIndex + 1 < twitterParts.length) {
+            return twitterParts[xStatusIndex + 1];
+          }
+        }
+        
+        return null;
+        
       default:
         return null;
     }
@@ -83,7 +158,7 @@ export function detectPlatform(url: string): SocialPlatform | null {
     
     if (hostname.includes('instagram')) return 'instagram';
     if (hostname.includes('facebook') || hostname.includes('fb.watch')) return 'facebook';
-    if (hostname.includes('tiktok')) return 'tiktok';
+    if (hostname.includes('tiktok') || hostname.includes('vm.tiktok')) return 'tiktok';
     if (hostname.includes('youtube') || hostname.includes('youtu.be')) return 'youtube';
     if (hostname.includes('twitter') || hostname.includes('x.com')) return 'twitter';
     
