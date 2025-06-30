@@ -213,6 +213,11 @@ const ViewPlaylist = () => {
     // Try to extract author and video ID from URL
     const author = extractAuthor(newReelUrl, platform) || `${platform} user`;
     const videoId = extractVideoId(newReelUrl, platform);
+    
+    if (!videoId) {
+      toast.error('Could not extract video ID from URL');
+      return;
+    }
 
     setIsLoading(true);
     try {
