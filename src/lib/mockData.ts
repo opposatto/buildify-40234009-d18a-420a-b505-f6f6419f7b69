@@ -32,11 +32,11 @@ export const mockReels: ReelItem[] = [
   },
   {
     id: uuidv4(),
-    title: 'Dance Challenge',
-    url: 'https://www.tiktok.com/@dance_trends/video/7234567890123456789',
+    title: 'Shovel Man Photo',
+    url: 'https://www.tiktok.com/@shovel._.man/photo/7268347701522189600',
     platform: 'tiktok',
-    author: 'dance_trends',
-    videoId: '7234567890123456789',
+    author: 'shovel._.man',
+    videoId: '7268347701522189600',
     addedAt: new Date()
   },
   {
@@ -121,6 +121,21 @@ export const mockPlaylists: Playlist[] = [
     logoUrl: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8ZWR1Y2F0aW9ufGVufDB8fDB8fHww',
     reels: [mockReels[2], mockReels[4], mockReels[9]],
     tags: [mockTags[1]],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: uuidv4(),
+    name: 'Test Playlist',
+    description: 'Testing different platform embeds',
+    logoUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8dGVjaG5vbG9neXxlbnwwfHwwfHx8MA%3D%3D',
+    reels: [
+      mockReels[3], // TikTok photo
+      mockReels[0], // Instagram reel
+      mockReels[4], // YouTube video
+      mockReels[5]  // Facebook video
+    ],
+    tags: [mockTags[0], mockTags[1]],
     createdAt: new Date(),
     updatedAt: new Date()
   },
