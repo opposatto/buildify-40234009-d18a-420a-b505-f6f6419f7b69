@@ -3,12 +3,13 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardFooter } from '../components/ui/card';
-import { PlusIcon, PlayIcon, Trash2Icon, Share2Icon, TagIcon } from 'lucide-react';
+import { PlusIcon, PlayIcon, Trash2Icon, Share2Icon, TagIcon, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
   Playlist, 
   getPlaylistsFromStorage, 
-  savePlaylistsToStorage 
+  savePlaylistsToStorage,
+  copyToClipboard
 } from '../lib/utils';
 import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
@@ -18,6 +19,7 @@ import TagManager from '../components/TagManager';
 interface Tag {
   id: string;
   name: string;
+  color?: string;
 }
 
 const MyPlaylists = () => {
@@ -27,6 +29,7 @@ const MyPlaylists = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedFilterTags, setSelectedFilterTags] = useState<Tag[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [copiedPlaylistId, setCopiedPlaylistId] = useState<string | null>(null);
 
   useEffect(() => {
     checkUser();
@@ -45,6 +48,16 @@ const MyPlaylists = () => {
       setFilteredPlaylists(filtered);
     }
   }, [selectedFilterTags, playlists]);
+
+  // Reset copied state after 2 seconds
+  useEffect(() => {
+    if (copiedPlaylistId) {
+      const timer = setTimeout(() => {
+        setCopiedPlaylistId(null);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [copiedPlaylistId]);
 
   const checkUser = async () => {
     setIsLoading(true);
@@ -168,10 +181,15 @@ const MyPlaylists = () => {
     }
   };
 
-  const sharePlaylist = (id: string) => {
-    // In a real implementation, this would generate a shareable link
-    navigator.clipboard.writeText(`${window.location.origin}/playlist/${id}`);
-    toast.success('Playlist link copied to clipboard');
+  const sharePlaylist = async (id: string) => {
+    try {
+      await copyToClipboard(`${window.location.origin}/playlist/${id}`);
+      setCopiedPlaylistId(id);
+      toast.success('Playlist link copied to clipboard');
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      toast.error('Failed to copy link');
+    }
   };
 
   const container = {
@@ -289,7 +307,7 @@ const MyPlaylists = () => {
                         {playlist.tags.map(tag => (
                           <span 
                             key={tag.id}
-                            className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300"
+                            className={`text-xs px-2 py-0.5 rounded-full border ${tag.color || 'bg-purple-500/20 text-purple-300 border-purple-500/30'}`}
                           >
                             {tag.name}
                           </span>
@@ -315,7 +333,11 @@ const MyPlaylists = () => {
                         onClick={() => sharePlaylist(playlist.id)}
                         className="group-hover:border-pink-500/50 group-hover:text-pink-400 transition-colors"
                       >
-                        <Share2Icon className="h-4 w-4" />
+                        {copiedPlaylistId === playlist.id ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Share2Icon className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                     <Button 
