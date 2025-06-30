@@ -11,9 +11,9 @@ import NotFound from './pages/NotFound';
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="light" storageKey="reels-mixer-theme">
+    <ThemeProvider defaultTheme="dark" storageKey="reels-mixer-theme">
       <Router>
-        <Toaster position="top-right" />
+        <Toaster position="top-right" richColors />
         <Navbar />
         <main className="container mx-auto px-4 py-6">
           <Routes>
