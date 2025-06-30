@@ -90,6 +90,68 @@ export interface Database {
           }
         ]
       }
+      tags: {
+        Row: {
+          id: string
+          name: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          user_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tags_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      playlist_tags: {
+        Row: {
+          id: string
+          playlist_id: string
+          tag_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          playlist_id: string
+          tag_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          playlist_id?: string
+          tag_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playlist_tags_playlist_id_fkey"
+            columns: ["playlist_id"]
+            referencedRelation: "playlists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playlist_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       users: {
         Row: {
           id: string
