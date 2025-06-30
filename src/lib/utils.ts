@@ -192,7 +192,7 @@ export function markAsVisited(): void {
 // Copy to clipboard with fallback
 export function copyToClipboard(text: string): Promise<boolean> {
   return new Promise((resolve) => {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
+    if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(text)
         .then(() => resolve(true))
         .catch((error) => {
@@ -222,7 +222,10 @@ function fallbackCopyToClipboard(text: string): void {
   textArea.select();
   
   try {
-    document.execCommand('copy');
+    const successful = document.execCommand('copy');
+    if (!successful) {
+      console.error('Fallback: Unable to copy');
+    }
   } catch (err) {
     console.error('Fallback: Oops, unable to copy', err);
   }
