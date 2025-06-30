@@ -1,0 +1,52 @@
+
+Create a social media reels playlist creator app called "ReelsMixer" with the following features:
+
+1. Core Functionality:
+   - Create playlists that combine reels/videos from different social platforms (Instagram, TikTok, Facebook, YouTube, Twitter)
+   - Play reels in sequence within a playlist
+   - Add/remove reels from playlists
+   - Share playlists via copyable links
+   - Tag management system with colorized tags
+   - Filter playlists by tags
+
+2. UI/UX Requirements:
+   - Dark mode by default (no light mode option)
+   - Gradient background with subtle radial patterns
+   - Purple-to-pink gradient buttons and accents
+   - Animations using framer-motion for page transitions and elements
+   - Responsive design that works on all screen sizes
+   - Welcome screen for first-time visitors
+   - "My Playlists" as the default homepage for returning users
+   - Support for playlist logos via URL
+
+3. Database Structure (Supabase):
+   - Users table with email and authentication
+   - Playlists table with name, description, logo_url
+   - Reels table with title, url, platform, author, video_id
+   - Tags table with name and color
+   - playlist_tags junction table for many-to-many relationship
+
+4. Technical Implementation:
+   - React with TypeScript
+   - React Router for navigation
+   - Tailwind CSS for styling
+   - Framer Motion for animations
+   - Supabase for backend (with local storage fallback)
+   - Embedded players for each platform (Instagram, TikTok, YouTube, Facebook, Twitter)
+   - URL parsing to extract video IDs and author names
+   - Clipboard API for sharing functionality
+
+5. Key Components:
+   - EmbeddedPlayer: Handles platform-specific video embedding
+   - TagManager: Manages tag creation, selection, and filtering
+   - PlatformIcon: Displays the correct icon for each social platform
+   - Playlist views: Create, View, and List pages
+
+6. Special Features:
+   - Auto-detection of platform from URL
+   - Extraction of author names and video IDs from URLs
+   - Colorized tags with preset colors
+   - Mock data generation for testing
+   - Smooth animations and transitions
+
+Use a modern, gradient-rich UI with backdrop blur effects, rounded corners, and a cohesive dark purple/pink color scheme. The app should work without a backend by using local storage, but also integrate with Supabase when available.
