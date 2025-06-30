@@ -5,11 +5,8 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import TagManager from '../components/TagManager';
+import PlatformIcon from '../components/PlatformIcon';
 import { 
-  Instagram, 
-  Facebook, 
-  Youtube, 
-  X, 
   ArrowLeft, 
   Play, 
   Pause, 
@@ -162,23 +159,6 @@ const ViewPlaylist = () => {
       navigate('/my-playlists');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const getPlatformIcon = (platform: SocialPlatform) => {
-    switch (platform) {
-      case 'instagram':
-        return <Instagram className="h-5 w-5" />;
-      case 'facebook':
-        return <Facebook className="h-5 w-5" />;
-      case 'youtube':
-        return <Youtube className="h-5 w-5" />;
-      case 'twitter':
-        return <X className="h-5 w-5" />;
-      case 'tiktok':
-        return <span className="font-bold">TT</span>;
-      default:
-        return null;
     }
   };
 
@@ -550,7 +530,7 @@ const ViewPlaylist = () => {
               <div className="text-center p-4 w-full h-full flex flex-col items-center justify-center">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 flex items-center justify-center">
-                    {currentReel && getPlatformIcon(currentReel.platform)}
+                    {currentReel && <PlatformIcon platform={currentReel.platform} />}
                   </div>
                   <p className="font-medium">
                     {currentReel?.author || (currentReel?.platform && `${currentReel.platform} user`)}
@@ -630,7 +610,7 @@ const ViewPlaylist = () => {
                 />
                 <Button 
                   onClick={addReel}
-                  disabled={isLoading}
+                  disabled={isLoading || !newReelUrl.trim()}
                   className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
                 >
                   {isLoading ? (
@@ -664,7 +644,7 @@ const ViewPlaylist = () => {
                             ? 'bg-gradient-to-br from-purple-500 to-pink-500' 
                             : 'bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30'
                         }`}>
-                          {getPlatformIcon(reel.platform)}
+                          <PlatformIcon platform={reel.platform} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium">{reel.author || reel.title}</p>
