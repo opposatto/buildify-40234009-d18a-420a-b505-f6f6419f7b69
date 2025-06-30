@@ -13,6 +13,7 @@ export interface ReelItem {
   title: string;
   url: string;
   platform: SocialPlatform;
+  author?: string;
   thumbnail?: string;
   duration?: number;
   addedAt: Date;
@@ -22,6 +23,7 @@ export interface Playlist {
   id: string;
   name: string;
   description?: string;
+  logoUrl?: string;
   reels: ReelItem[];
   createdAt: Date;
   updatedAt: Date;
@@ -72,6 +74,36 @@ export function detectPlatform(url: string): SocialPlatform | null {
   }
 }
 
+// Extract author from URL
+export function extractAuthor(url: string, platform: SocialPlatform): string | null {
+  try {
+    const urlObj = new URL(url);
+    
+    switch(platform) {
+      case 'tiktok':
+        // Example: https://www.tiktok.com/@username/video/1234567890
+        const pathParts = urlObj.pathname.split('/').filter(Boolean);
+        if (pathParts[0]?.startsWith('@')) {
+          return pathParts[0].substring(1); // Remove the @ symbol
+        }
+        return null;
+      case 'instagram':
+        // For Instagram, we'd need to fetch the page and extract the author
+        // This is a simplified placeholder
+        return null;
+      case 'youtube':
+        // For YouTube, we'd need to use the YouTube API
+        // This is a simplified placeholder
+        return null;
+      default:
+        return null;
+    }
+  } catch (e) {
+    console.error("Invalid URL:", e);
+    return null;
+  }
+}
+
 // Local storage helpers
 export function savePlaylistsToStorage(playlists: Playlist[]): void {
   localStorage.setItem('reelsmixer-playlists', JSON.stringify(playlists));
@@ -86,4 +118,19 @@ export function getPlaylistsFromStorage(): Playlist[] {
     console.error("Error parsing playlists from storage:", e);
     return [];
   }
+}
+
+// Check if it's the first visit
+export function isFirstVisit(): boolean {
+  const visited = localStorage.getItem('reelsmixer-visited');
+  if (!visited) {
+    localStorage.setItem('reelsmixer-visited', 'true');
+    return true;
+  }
+  return false;
+}
+
+// Mark as visited
+export function markAsVisited(): void {
+  localStorage.setItem('reelsmixer-visited', 'true');
 }
