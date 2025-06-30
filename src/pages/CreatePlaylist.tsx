@@ -15,14 +15,14 @@ import {
   X, 
   Trash2, 
   Plus, 
-  Save, 
-  ArrowRight 
+  Save
 } from 'lucide-react';
 import { 
   ReelItem, 
   Playlist, 
   SocialPlatform, 
-  detectPlatform, 
+  detectPlatform,
+  extractAuthor,
   getPlaylistsFromStorage, 
   savePlaylistsToStorage 
 } from '../lib/utils';
@@ -31,6 +31,7 @@ const CreatePlaylist = () => {
   const navigate = useNavigate();
   const [playlistName, setPlaylistName] = useState('');
   const [playlistDescription, setPlaylistDescription] = useState('');
+  const [playlistLogo, setPlaylistLogo] = useState('');
   const [reelUrl, setReelUrl] = useState('');
   const [reels, setReels] = useState<ReelItem[]>([]);
 
@@ -63,11 +64,15 @@ const CreatePlaylist = () => {
       return;
     }
 
+    // Try to extract author from URL
+    const author = extractAuthor(reelUrl, platform) || `${platform} user`;
+
     const newReel: ReelItem = {
       id: uuidv4(),
-      title: `Reel from ${platform}`,
+      title: author,
       url: reelUrl,
       platform,
+      author,
       addedAt: new Date()
     };
 
@@ -96,6 +101,7 @@ const CreatePlaylist = () => {
       id: uuidv4(),
       name: playlistName,
       description: playlistDescription,
+      logoUrl: playlistLogo,
       reels,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -110,7 +116,7 @@ const CreatePlaylist = () => {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Create New Playlist</h1>
+      <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-purple-500 to-pink-500 text-transparent bg-clip-text">Create New Playlist</h1>
       
       <div className="grid gap-6 mb-8">
         <div>
@@ -134,6 +140,17 @@ const CreatePlaylist = () => {
             className="mt-1"
           />
         </div>
+
+        <div>
+          <Label htmlFor="playlist-logo">Logo URL (Optional)</Label>
+          <Input
+            id="playlist-logo"
+            value={playlistLogo}
+            onChange={(e) => setPlaylistLogo(e.target.value)}
+            placeholder="https://example.com/logo.png"
+            className="mt-1"
+          />
+        </div>
       </div>
       
       <div className="mb-8">
@@ -146,7 +163,7 @@ const CreatePlaylist = () => {
             placeholder="https://www.instagram.com/reel/..."
             className="flex-1"
           />
-          <Button onClick={addReel}>
+          <Button onClick={addReel} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
             <Plus className="h-4 w-4 mr-2" />
             Add
           </Button>
@@ -159,25 +176,27 @@ const CreatePlaylist = () => {
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4">Reels in Playlist ({reels.length})</h2>
         {reels.length === 0 ? (
-          <div className="text-center p-8 border rounded-lg">
+          <div className="text-center p-8 border rounded-lg bg-card/50">
             <p className="text-muted-foreground">No reels added yet. Add some reels to get started!</p>
           </div>
         ) : (
           <div className="grid gap-4">
-            {reels.map((reel, index) => (
-              <Card key={reel.id}>
+            {reels.map((reel) => (
+              <Card key={reel.id} className="overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm">
                 <CardContent className="p-4 flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center h-8 w-8 rounded-full bg-muted">
+                    <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30">
                       {getPlatformIcon(reel.platform)}
                     </div>
-                    <div>
-                      <p className="font-medium capitalize">{reel.platform} Reel</p>
-                      <p className="text-sm text-muted-foreground truncate max-w-md">{reel.url}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium">{reel.author || reel.title}</p>
+                      <p className="text-sm text-muted-foreground truncate max-w-[300px] sm:max-w-[400px] md:max-w-[500px]">
+                        {new URL(reel.url).hostname}
+                      </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => removeReel(reel.id)}>
-                    <Trash2 className="h-5 w-5 text-destructive" />
+                  <Button variant="ghost" size="icon" onClick={() => removeReel(reel.id)} className="text-destructive hover:text-destructive/90 hover:bg-destructive/10">
+                    <Trash2 className="h-5 w-5" />
                   </Button>
                 </CardContent>
               </Card>
@@ -190,7 +209,11 @@ const CreatePlaylist = () => {
         <Button variant="outline" onClick={() => navigate('/')}>
           Cancel
         </Button>
-        <Button onClick={savePlaylist} disabled={reels.length === 0 || !playlistName.trim()}>
+        <Button 
+          onClick={savePlaylist} 
+          disabled={reels.length === 0 || !playlistName.trim()}
+          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+        >
           <Save className="h-4 w-4 mr-2" />
           Save Playlist
         </Button>
