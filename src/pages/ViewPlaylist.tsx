@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -18,7 +18,8 @@ import {
   Share2,
   Plus,
   Trash2,
-  TagIcon
+  TagIcon,
+  Check
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -27,6 +28,8 @@ import {
   SocialPlatform, 
   detectPlatform,
   extractAuthor,
+  extractVideoId,
+  copyToClipboard,
   getPlaylistsFromStorage,
   savePlaylistsToStorage
 } from '../lib/utils';
@@ -37,6 +40,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface Tag {
   id: string;
   name: string;
+  color?: string;
 }
 
 const ViewPlaylist = () => {
@@ -50,6 +54,8 @@ const ViewPlaylist = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [showTagManager, setShowTagManager] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const playerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     checkUser();
@@ -75,6 +81,16 @@ const ViewPlaylist = () => {
       }
     }
   }, [id, userId, navigate]);
+
+  // Reset copied state after 2 seconds
+  useEffect(() => {
+    if (isCopied) {
+      const timer = setTimeout(() => {
+        setIsCopied(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isCopied]);
 
   const checkUser = async () => {
     const { data } = await supabase.auth.getSession();
@@ -123,9 +139,18 @@ const ViewPlaylist = () => {
         playlistTags = tagsData || [];
       }
 
+      // Process reels to extract video IDs
+      const processedReels = reelsData.map(reel => {
+        const videoId = extractVideoId(reel.url, reel.platform as SocialPlatform);
+        return {
+          ...reel,
+          videoId
+        };
+      });
+
       const fullPlaylist = {
         ...playlistData,
-        reels: reelsData || [],
+        reels: processedReels || [],
         tags: playlistTags
       };
 
@@ -176,10 +201,19 @@ const ViewPlaylist = () => {
     );
   };
 
-  const sharePlaylist = () => {
+  const sharePlaylist = async () => {
     if (!playlist) return;
-    navigator.clipboard.writeText(`${window.location.origin}/playlist/${playlist.id}`);
-    toast.success('Playlist link copied to clipboard');
+    
+    const shareUrl = `${window.location.origin}/playlist/${playlist.id}`;
+    
+    try {
+      await copyToClipboard(shareUrl);
+      setIsCopied(true);
+      toast.success('Playlist link copied to clipboard');
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      toast.error('Failed to copy link');
+    }
   };
 
   const addReel = async () => {
@@ -194,8 +228,9 @@ const ViewPlaylist = () => {
       return;
     }
 
-    // Try to extract author from URL
+    // Try to extract author and video ID from URL
     const author = extractAuthor(newReelUrl, platform) || `${platform} user`;
+    const videoId = extractVideoId(newReelUrl, platform);
 
     setIsLoading(true);
     try {
@@ -218,7 +253,7 @@ const ViewPlaylist = () => {
         // Update local state
         const updatedPlaylist = {
           ...playlist,
-          reels: [...playlist.reels, data]
+          reels: [...playlist.reels, {...data, videoId}]
         };
         
         setPlaylist(updatedPlaylist);
@@ -230,6 +265,7 @@ const ViewPlaylist = () => {
           url: newReelUrl,
           platform,
           author,
+          videoId,
           addedAt: new Date()
         };
 
@@ -430,7 +466,7 @@ const ViewPlaylist = () => {
                 {playlist.tags.map(tag => (
                   <span 
                     key={tag.id}
-                    className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300"
+                    className={`text-xs px-2 py-0.5 rounded-full border ${tag.color || 'bg-purple-500/20 text-purple-300 border-purple-500/30'}`}
                   >
                     {tag.name}
                   </span>
@@ -506,7 +542,10 @@ const ViewPlaylist = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="lg:col-span-2"
           >
-            <div className="aspect-[9/16] max-h-[70vh] bg-muted rounded-lg flex items-center justify-center mb-4 overflow-hidden bg-card/50 backdrop-blur-sm border border-border/50">
+            <div 
+              ref={playerRef}
+              className="aspect-[9/16] max-h-[70vh] bg-muted rounded-lg flex items-center justify-center mb-4 overflow-hidden bg-card/50 backdrop-blur-sm border border-border/50"
+            >
               {/* In a real implementation, this would be an embedded player */}
               <div className="text-center p-4 w-full h-full flex flex-col items-center justify-center">
                 <div className="flex items-center justify-center gap-2 mb-2">
@@ -514,11 +553,15 @@ const ViewPlaylist = () => {
                     {currentReel && getPlatformIcon(currentReel.platform)}
                   </div>
                   <p className="font-medium">
-                    {currentReel?.author || (currentReel?.platform && `${currentReel.platform.toUpperCase()} Reel`)}
+                    {currentReel?.author || (currentReel?.platform && `${currentReel.platform} user`)}
                   </p>
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">
-                  {currentReel?.url && new URL(currentReel.url).hostname}
+                  {currentReel?.videoId ? (
+                    <span className="px-2 py-0.5 bg-black/30 rounded">ID: {currentReel.videoId}</span>
+                  ) : (
+                    currentReel?.url && new URL(currentReel.url).hostname
+                  )}
                 </p>
                 <div className="w-full max-w-md mx-auto flex-1 bg-black/30 rounded flex items-center justify-center">
                   <p className="text-xs text-muted-foreground">
@@ -554,8 +597,12 @@ const ViewPlaylist = () => {
                 onClick={sharePlaylist}
                 className="rounded-full"
               >
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
+                {isCopied ? (
+                  <Check className="h-4 w-4 mr-2 text-green-500" />
+                ) : (
+                  <Share2 className="h-4 w-4 mr-2" />
+                )}
+                {isCopied ? 'Copied!' : 'Share'}
               </Button>
             </div>
           </motion.div>
@@ -622,7 +669,7 @@ const ViewPlaylist = () => {
                         <div className="flex-1 min-w-0">
                           <p className="font-medium">{reel.author || reel.title}</p>
                           <p className="text-sm text-muted-foreground truncate">
-                            {new URL(reel.url).hostname}
+                            {reel.videoId ? `ID: ${reel.videoId}` : 'No ID'}
                           </p>
                         </div>
                         <Button 
