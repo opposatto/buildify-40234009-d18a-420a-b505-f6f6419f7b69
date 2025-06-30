@@ -9,11 +9,8 @@ import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
 import { Card, CardContent } from '../components/ui/card';
 import TagManager from '../components/TagManager';
+import PlatformIcon from '../components/PlatformIcon';
 import { 
-  Instagram, 
-  Facebook, 
-  Youtube, 
-  X, 
   Trash2, 
   Plus, 
   Save
@@ -56,23 +53,6 @@ const CreatePlaylist = () => {
     const { data } = await supabase.auth.getSession();
     if (data.session?.user) {
       setUserId(data.session.user.id);
-    }
-  };
-
-  const getPlatformIcon = (platform: SocialPlatform) => {
-    switch (platform) {
-      case 'instagram':
-        return <Instagram className="h-5 w-5" />;
-      case 'facebook':
-        return <Facebook className="h-5 w-5" />;
-      case 'youtube':
-        return <Youtube className="h-5 w-5" />;
-      case 'twitter':
-        return <X className="h-5 w-5" />;
-      case 'tiktok':
-        return <span className="font-bold">TT</span>;
-      default:
-        return null;
     }
   };
 
@@ -281,6 +261,7 @@ const CreatePlaylist = () => {
           />
           <Button 
             onClick={addReel} 
+            disabled={!reelUrl.trim()}
             className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -318,7 +299,7 @@ const CreatePlaylist = () => {
                     <CardContent className="p-4 flex justify-between items-center">
                       <div className="flex items-center gap-3">
                         <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30">
-                          {getPlatformIcon(reel.platform)}
+                          <PlatformIcon platform={reel.platform} />
                         </div>
                         <div className="min-w-0">
                           <p className="font-medium">{reel.author || reel.title}</p>
