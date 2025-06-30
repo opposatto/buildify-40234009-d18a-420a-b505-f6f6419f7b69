@@ -24,6 +24,7 @@ import {
   SocialPlatform, 
   detectPlatform,
   extractAuthor,
+  extractVideoId,
   getPlaylistsFromStorage, 
   savePlaylistsToStorage 
 } from '../lib/utils';
@@ -33,6 +34,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface Tag {
   id: string;
   name: string;
+  color?: string;
 }
 
 const CreatePlaylist = () => {
@@ -86,8 +88,9 @@ const CreatePlaylist = () => {
       return;
     }
 
-    // Try to extract author from URL
+    // Try to extract author and video ID from URL
     const author = extractAuthor(reelUrl, platform) || `${platform} user`;
+    const videoId = extractVideoId(reelUrl, platform);
 
     const newReel: ReelItem = {
       id: uuidv4(),
@@ -95,6 +98,7 @@ const CreatePlaylist = () => {
       url: reelUrl,
       platform,
       author,
+      videoId,
       addedAt: new Date()
     };
 
@@ -176,9 +180,9 @@ const CreatePlaylist = () => {
           description: playlistDescription,
           logoUrl: playlistLogo,
           reels,
+          tags: selectedTags,
           createdAt: new Date(),
-          updatedAt: new Date(),
-          tags: selectedTags
+          updatedAt: new Date()
         };
 
         const existingPlaylists = getPlaylistsFromStorage();
@@ -319,7 +323,7 @@ const CreatePlaylist = () => {
                         <div className="min-w-0">
                           <p className="font-medium">{reel.author || reel.title}</p>
                           <p className="text-sm text-muted-foreground truncate max-w-[300px] sm:max-w-[400px] md:max-w-[500px]">
-                            {new URL(reel.url).hostname}
+                            {reel.videoId ? `ID: ${reel.videoId}` : new URL(reel.url).hostname}
                           </p>
                         </div>
                       </div>
