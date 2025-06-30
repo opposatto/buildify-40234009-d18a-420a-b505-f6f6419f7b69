@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -8,6 +8,7 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
 import { Card, CardContent } from '../components/ui/card';
+import TagManager from '../components/TagManager';
 import { 
   Instagram, 
   Facebook, 
@@ -26,6 +27,13 @@ import {
   getPlaylistsFromStorage, 
   savePlaylistsToStorage 
 } from '../lib/utils';
+import { supabase } from '@/lib/supabase';
+import { motion, AnimatePresence } from 'framer-motion';
+
+interface Tag {
+  id: string;
+  name: string;
+}
 
 const CreatePlaylist = () => {
   const navigate = useNavigate();
@@ -34,6 +42,20 @@ const CreatePlaylist = () => {
   const [playlistLogo, setPlaylistLogo] = useState('');
   const [reelUrl, setReelUrl] = useState('');
   const [reels, setReels] = useState<ReelItem[]>([]);
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    checkUser();
+  }, []);
+
+  const checkUser = async () => {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.user) {
+      setUserId(data.session.user.id);
+    }
+  };
 
   const getPlatformIcon = (platform: SocialPlatform) => {
     switch (platform) {
@@ -86,7 +108,7 @@ const CreatePlaylist = () => {
     toast.info('Reel removed from playlist');
   };
 
-  const savePlaylist = () => {
+  const savePlaylist = async () => {
     if (!playlistName.trim()) {
       toast.error('Please enter a playlist name');
       return;
@@ -97,28 +119,99 @@ const CreatePlaylist = () => {
       return;
     }
 
-    const newPlaylist: Playlist = {
-      id: uuidv4(),
-      name: playlistName,
-      description: playlistDescription,
-      logoUrl: playlistLogo,
-      reels,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    setIsLoading(true);
 
-    const existingPlaylists = getPlaylistsFromStorage();
-    savePlaylistsToStorage([...existingPlaylists, newPlaylist]);
-    
-    toast.success('Playlist created successfully!');
-    navigate(`/playlist/${newPlaylist.id}`);
+    try {
+      if (userId) {
+        // Save to Supabase
+        const { data: playlistData, error: playlistError } = await supabase
+          .from('playlists')
+          .insert({
+            name: playlistName,
+            description: playlistDescription,
+            logo_url: playlistLogo,
+            user_id: userId
+          })
+          .select()
+          .single();
+
+        if (playlistError) throw playlistError;
+
+        // Insert reels
+        const reelsToInsert = reels.map(reel => ({
+          playlist_id: playlistData.id,
+          title: reel.title,
+          url: reel.url,
+          platform: reel.platform,
+          author: reel.author
+        }));
+
+        const { error: reelsError } = await supabase
+          .from('reels')
+          .insert(reelsToInsert);
+
+        if (reelsError) throw reelsError;
+
+        // Insert playlist tags
+        if (selectedTags.length > 0) {
+          const playlistTagsToInsert = selectedTags.map(tag => ({
+            playlist_id: playlistData.id,
+            tag_id: tag.id
+          }));
+
+          const { error: tagsError } = await supabase
+            .from('playlist_tags')
+            .insert(playlistTagsToInsert);
+
+          if (tagsError) throw tagsError;
+        }
+
+        toast.success('Playlist saved to your account');
+        navigate(`/playlist/${playlistData.id}`);
+      } else {
+        // Save to local storage
+        const newPlaylist: Playlist = {
+          id: uuidv4(),
+          name: playlistName,
+          description: playlistDescription,
+          logoUrl: playlistLogo,
+          reels,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          tags: selectedTags
+        };
+
+        const existingPlaylists = getPlaylistsFromStorage();
+        savePlaylistsToStorage([...existingPlaylists, newPlaylist]);
+        
+        toast.success('Playlist created successfully!');
+        navigate(`/playlist/${newPlaylist.id}`);
+      }
+    } catch (error) {
+      console.error('Error saving playlist:', error);
+      toast.error('Failed to save playlist');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-purple-500 to-pink-500 text-transparent bg-clip-text">Create New Playlist</h1>
+      <motion.h1 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="text-3xl font-bold mb-6 bg-gradient-to-r from-purple-500 to-pink-500 text-transparent bg-clip-text"
+      >
+        Create New Playlist
+      </motion.h1>
       
-      <div className="grid gap-6 mb-8">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+        className="grid gap-6 mb-8"
+      >
         <div>
           <Label htmlFor="playlist-name">Playlist Name</Label>
           <Input
@@ -151,9 +244,23 @@ const CreatePlaylist = () => {
             className="mt-1"
           />
         </div>
-      </div>
+
+        <div>
+          <Label htmlFor="playlist-tags" className="mb-2 block">Tags</Label>
+          <TagManager 
+            selectedTags={selectedTags} 
+            onTagsChange={setSelectedTags} 
+            userId={userId || undefined}
+          />
+        </div>
+      </motion.div>
       
-      <div className="mb-8">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="mb-8"
+      >
         <Label htmlFor="reel-url">Add Reel URL</Label>
         <div className="flex gap-2 mt-1">
           <Input
@@ -162,8 +269,16 @@ const CreatePlaylist = () => {
             onChange={(e) => setReelUrl(e.target.value)}
             placeholder="https://www.instagram.com/reel/..."
             className="flex-1"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && reelUrl.trim()) {
+                addReel();
+              }
+            }}
           />
-          <Button onClick={addReel} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+          <Button 
+            onClick={addReel} 
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Add
           </Button>
@@ -171,9 +286,14 @@ const CreatePlaylist = () => {
         <p className="text-sm text-muted-foreground mt-2">
           Supported platforms: Instagram, Facebook, TikTok, YouTube, Twitter
         </p>
-      </div>
+      </motion.div>
       
-      <div className="mb-8">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+        className="mb-8"
+      >
         <h2 className="text-xl font-semibold mb-4">Reels in Playlist ({reels.length})</h2>
         {reels.length === 0 ? (
           <div className="text-center p-8 border rounded-lg bg-card/50">
@@ -181,43 +301,67 @@ const CreatePlaylist = () => {
           </div>
         ) : (
           <div className="grid gap-4">
-            {reels.map((reel) => (
-              <Card key={reel.id} className="overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm">
-                <CardContent className="p-4 flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30">
-                      {getPlatformIcon(reel.platform)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium">{reel.author || reel.title}</p>
-                      <p className="text-sm text-muted-foreground truncate max-w-[300px] sm:max-w-[400px] md:max-w-[500px]">
-                        {new URL(reel.url).hostname}
-                      </p>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={() => removeReel(reel.id)} className="text-destructive hover:text-destructive/90 hover:bg-destructive/10">
-                    <Trash2 className="h-5 w-5" />
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+            <AnimatePresence>
+              {reels.map((reel) => (
+                <motion.div
+                  key={reel.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Card className="overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm hover:border-purple-500/30 transition-all duration-300">
+                    <CardContent className="p-4 flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30">
+                          {getPlatformIcon(reel.platform)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium">{reel.author || reel.title}</p>
+                          <p className="text-sm text-muted-foreground truncate max-w-[300px] sm:max-w-[400px] md:max-w-[500px]">
+                            {new URL(reel.url).hostname}
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => removeReel(reel.id)} 
+                        className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
-      </div>
+      </motion.div>
       
-      <div className="flex justify-end gap-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+        className="flex justify-end gap-4"
+      >
         <Button variant="outline" onClick={() => navigate('/')}>
           Cancel
         </Button>
         <Button 
           onClick={savePlaylist} 
-          disabled={reels.length === 0 || !playlistName.trim()}
+          disabled={reels.length === 0 || !playlistName.trim() || isLoading}
           className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
         >
-          <Save className="h-4 w-4 mr-2" />
+          {isLoading ? (
+            <div className="h-4 w-4 mr-2 rounded-full border-2 border-t-transparent border-white animate-spin" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          )}
           Save Playlist
         </Button>
-      </div>
+      </motion.div>
     </div>
   );
 };
