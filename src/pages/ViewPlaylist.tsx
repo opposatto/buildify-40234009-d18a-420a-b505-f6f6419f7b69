@@ -17,8 +17,7 @@ import {
   Plus,
   Trash2,
   TagIcon,
-  Check,
-  ExternalLink
+  Check
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -383,10 +382,6 @@ const ViewPlaylist = () => {
     }
   };
 
-  const openInNewTab = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-[60vh]">
@@ -568,18 +563,6 @@ const ViewPlaylist = () => {
                 <Button variant="outline" size="icon" onClick={nextReel} className="rounded-full">
                   <SkipForward className="h-4 w-4" />
                 </Button>
-                
-                {currentReel && (
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    onClick={() => openInNewTab(currentReel.url)}
-                    className="rounded-full ml-2"
-                    title="Open in original site"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                )}
               </div>
               
               <Button 
