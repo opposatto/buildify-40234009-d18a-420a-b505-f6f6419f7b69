@@ -42,7 +42,7 @@ const MyPlaylists = () => {
       const filtered = playlists.filter(playlist => {
         if (!playlist.tags) return false;
         return selectedFilterTags.every(filterTag => 
-          playlist.tags.some(playlistTag => playlistTag.id === filterTag.id)
+          playlist.tags?.some(playlistTag => playlistTag.id === filterTag.id)
         );
       });
       setFilteredPlaylists(filtered);
@@ -103,10 +103,16 @@ const MyPlaylists = () => {
         if (tagsError) throw tagsError;
 
         // Get full tag objects
-        const playlistTags = tagsData.map(tagRelation => {
-          const tag = tags.find(t => t.id === tagRelation.tag_id);
-          return tag || { id: tagRelation.tag_id, name: 'Unknown' };
-        });
+        const playlistTags = await Promise.all(tagsData.map(async (tagRelation) => {
+          const { data: tagData, error: tagError } = await supabase
+            .from('tags')
+            .select('*')
+            .eq('id', tagRelation.tag_id)
+            .single();
+            
+          if (tagError) return { id: tagRelation.tag_id, name: 'Unknown' };
+          return tagData;
+        }));
 
         return {
           ...playlist,
@@ -166,7 +172,7 @@ const MyPlaylists = () => {
             if (selectedFilterTags.length === 0) return true;
             if (!playlist.tags) return false;
             return selectedFilterTags.every(filterTag => 
-              playlist.tags.some(playlistTag => playlistTag.id === filterTag.id)
+              playlist.tags?.some(playlistTag => playlistTag.id === filterTag.id)
             );
           }));
         }
@@ -183,7 +189,8 @@ const MyPlaylists = () => {
 
   const sharePlaylist = async (id: string) => {
     try {
-      await copyToClipboard(`${window.location.origin}/playlist/${id}`);
+      const shareUrl = `${window.location.origin}/playlist/${id}`;
+      await copyToClipboard(shareUrl);
       setCopiedPlaylistId(id);
       toast.success('Playlist link copied to clipboard');
     } catch (error) {
