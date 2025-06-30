@@ -6,10 +6,12 @@ import { X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
+import { generateTagColor } from '@/lib/utils';
 
 interface Tag {
   id: string;
   name: string;
+  color?: string;
 }
 
 interface TagManagerProps {
@@ -40,7 +42,14 @@ const TagManager = ({ selectedTags, onTagsChange, userId }: TagManagerProps) => 
         .eq('user_id', userId);
         
       if (error) throw error;
-      setTags(data || []);
+      
+      // Add colors to tags if they don't have one
+      const tagsWithColors = (data || []).map(tag => ({
+        ...tag,
+        color: tag.color || generateTagColor()
+      }));
+      
+      setTags(tagsWithColors);
     } catch (error) {
       console.error('Error fetching tags:', error);
       toast.error('Failed to load tags');
@@ -52,17 +61,24 @@ const TagManager = ({ selectedTags, onTagsChange, userId }: TagManagerProps) => 
   const createTag = async () => {
     if (!userId || !newTagName.trim()) return;
     
+    const color = generateTagColor();
+    
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('tags')
-        .insert([{ name: newTagName.trim(), user_id: userId }])
+        .insert([{ 
+          name: newTagName.trim(), 
+          user_id: userId,
+          color
+        }])
         .select()
         .single();
         
       if (error) throw error;
       
-      setTags([...tags, data]);
+      const newTag = { ...data, color };
+      setTags([...tags, newTag]);
       setNewTagName('');
       toast.success('Tag created');
     } catch (error) {
@@ -110,7 +126,12 @@ const TagManager = ({ selectedTags, onTagsChange, userId }: TagManagerProps) => 
   const handleLocalTagCreate = () => {
     if (!newTagName.trim()) return;
     
-    const newTag = { id: crypto.randomUUID(), name: newTagName.trim() };
+    const newTag = { 
+      id: crypto.randomUUID(), 
+      name: newTagName.trim(),
+      color: generateTagColor()
+    };
+    
     setTags([...tags, newTag]);
     setNewTagName('');
     toast.success('Tag created');
@@ -162,10 +183,10 @@ const TagManager = ({ selectedTags, onTagsChange, userId }: TagManagerProps) => 
               <Button
                 variant={selectedTags.some(t => t.id === tag.id) ? "default" : "outline"}
                 size="sm"
-                className={`rounded-full text-sm h-8 px-3 ${
+                className={`rounded-full text-sm h-8 px-3 border ${
                   selectedTags.some(t => t.id === tag.id) 
                     ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700' 
-                    : 'hover:border-purple-500/50 hover:text-purple-400'
+                    : tag.color || 'hover:border-purple-500/50 hover:text-purple-400'
                 }`}
                 onClick={() => toggleTag(tag)}
               >
